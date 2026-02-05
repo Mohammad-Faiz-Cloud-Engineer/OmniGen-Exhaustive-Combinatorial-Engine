@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniGen - Combinatorial Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-6">
+
+    <div class="max-w-4xl w-full bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700">
+        <!-- Header -->
+        <header class="mb-8 flex justify-between items-center border-b border-gray-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">OmniGen</h1>
+                <p class="text-gray-400 text-sm mt-1">Exhaustive Combinatorial Engine</p>
+            </div>
+            <div id="status-indicator" class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-700 text-gray-300 uppercase tracking-wider">
+                Idle
+            </div>
+        </header>
+
+        <!-- Configuration -->
+        <div id="config-panel" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <!-- Charset Selection -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Character Set</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-upper" class="form-checkbox text-blue-500 rounded bg-gray-700 border-gray-600 focus:ring-offset-gray-800" checked>
+                        <span>Uppercase [A-Z]</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-lower" class="form-checkbox text-blue-500 rounded bg-gray-700 border-gray-600 focus:ring-offset-gray-800" checked>
+                        <span>Lowercase [a-z]</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-numbers" class="form-checkbox text-blue-500 rounded bg-gray-700 border-gray-600 focus:ring-offset-gray-800" checked>
+                        <span>Numbers [0-9]</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="check-symbols" class="form-checkbox text-blue-500 rounded bg-gray-700 border-gray-600 focus:ring-offset-gray-800">
+                        <span>Symbols [!@#...]</span>
+                    </label>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm text-gray-400 mb-1">Custom Characters</label>
+                        <input type="text" id="custom-chars" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 placeholder-gray-500" placeholder="e.g., @#$">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Length Settings -->
+            <div>
+                <h3 class="text-lg font-semibold text-white mb-4">Length Range</h3>
+                <div class="space-y-6">
+                    <div>
+                        <label class="flex justify-between text-sm text-gray-400 mb-1">
+                            <span>Minimum Length</span>
+                            <span id="min-val" class="text-white">1</span>
+                        </label>
+                        <input type="range" id="min-len" min="1" max="20" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-sm text-gray-400 mb-1">
+                            <span>Maximum Length</span>
+                            <span id="max-val" class="text-white">4</span>
+                        </label>
+                        <input type="range" id="max-len" min="1" max="20" value="4" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Metrics Panel -->
+        <div id="metrics-panel" class="hidden mb-8">
+            <h3 class="text-lg font-semibold text-white mb-4 flex justify-between items-center">
+                Live Metrics
+                <span id="cps-display" class="text-sm font-mono text-emerald-400">0 CPS</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-gray-750 bg-gray-700/50 p-4 rounded-xl border border-gray-600">
+                    <div class="text-gray-400 text-xs uppercase tracking-wide">Total Count</div>
+                    <div id="total-count" class="text-2xl font-bold text-white mt-1">0</div>
+                </div>
+                <div class="bg-gray-750 bg-gray-700/50 p-4 rounded-xl border border-gray-600">
+                    <div class="text-gray-400 text-xs uppercase tracking-wide">TXT Size</div>
+                    <div id="size-txt" class="text-xl font-mono text-blue-300 mt-1">0 B</div>
+                </div>
+                <div class="bg-gray-750 bg-gray-700/50 p-4 rounded-xl border border-gray-600">
+                    <div class="text-gray-400 text-xs uppercase tracking-wide">MD Size</div>
+                    <div id="size-md" class="text-xl font-mono text-purple-300 mt-1">0 B</div>
+                </div>
+                <div class="bg-gray-750 bg-gray-700/50 p-4 rounded-xl border border-gray-600">
+                    <div class="text-gray-400 text-xs uppercase tracking-wide">PDF Size</div>
+                    <div id="size-pdf" class="text-xl font-mono text-red-300 mt-1">0 B</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col md:flex-row gap-4 justify-between items-center pt-6 border-t border-gray-700">
+            <div class="flex gap-4 w-full md:w-auto">
+                <button id="btn-start" class="flex-1 md:flex-none px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition shadow-lg hover:shadow-blue-500/20">
+                    Start Generation
+                </button>
+                <button id="btn-stop" class="flex-1 md:flex-none px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition shadow-lg hover:shadow-red-500/20 hidden">
+                    Stop
+                </button>
+            </div>
+            
+            <div id="download-links" class="flex gap-2 hidden transition-all duration-300 opacity-0 transform translate-y-2">
+                <a href="/download/txt" target="_blank" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-blue-300 rounded-md text-sm transition border border-gray-600">Download .TXT</a>
+                <a href="/download/md" target="_blank" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-purple-300 rounded-md text-sm transition border border-gray-600">Download .MD</a>
+                <a href="/download/pdf" target="_blank" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-red-300 rounded-md text-sm transition border border-gray-600">Download .PDF</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
